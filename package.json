@@ -1,5 +1,5 @@
 {
-  "name": "codex-statusline",
+  "name": "@xiaoliwe/codex-statusline",
   "version": "0.1.0",
   "description": "Codex preset manager and Claude-style rich statusline renderer.",
   "type": "module",
@@ -7,6 +7,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/xiaoliwe/codex-statusline.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "homepage": "https://github.com/xiaoliwe/codex-statusline#readme",
   "bugs": {

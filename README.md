@@ -13,7 +13,7 @@ It updates `~/.codex/config.toml` and installs the rich renderer at `~/.claude/s
 ## Installation
 
 ```bash
-npm install -g codex-statusline
+npm install -g @xiaoliwe/codex-statusline
 codex-statusline install
 ```
 
@@ -22,7 +22,7 @@ Restart the client after install so it reloads config and renderer state.
 ## Update
 
 ```bash
-npm install -g codex-statusline@latest
+npm install -g @xiaoliwe/codex-statusline@latest
 codex-statusline install
 ```
 
