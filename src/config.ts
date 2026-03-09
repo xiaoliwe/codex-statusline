@@ -157,6 +157,11 @@ export function removeManagedStatusLine(content: string): string {
 }
 
 export function extractStatusLineItems(content: string): string[] | null {
+  const statusLine = extractStatusLine(content);
+  return statusLine?.items ?? null;
+}
+
+export function extractStatusLine(content: string): { items: string[]; managed: boolean } | null {
   const lines = splitLines(content);
   const tuiSection = findTuiSection(lines);
   if (!tuiSection) {
@@ -175,8 +180,49 @@ export function extractStatusLineItems(content: string): string[] | null {
   }
 
   try {
-    return JSON.parse(match[1]) as string[];
+    return {
+      items: JSON.parse(match[1]) as string[],
+      managed: lines[span.start]?.trim() === MANAGED_COMMENT,
+    };
   } catch {
     return null;
   }
+}
+
+export function repairManagedStatusLine(content: string, isSupportedItem: (item: string) => boolean): {
+  changed: boolean;
+  content: string;
+  remainingItems: string[];
+  removedItems: string[];
+} {
+  const statusLine = extractStatusLine(content);
+  if (!statusLine?.managed) {
+    return {
+      changed: false,
+      content,
+      remainingItems: statusLine?.items ?? [],
+      removedItems: [],
+    };
+  }
+
+  const removedItems = statusLine.items.filter((item) => !isSupportedItem(item));
+  if (removedItems.length === 0) {
+    return {
+      changed: false,
+      content,
+      remainingItems: statusLine.items,
+      removedItems,
+    };
+  }
+
+  const remainingItems = statusLine.items.filter((item) => isSupportedItem(item));
+  const nextContent =
+    remainingItems.length > 0 ? upsertStatusLine(content, remainingItems) : removeManagedStatusLine(content);
+
+  return {
+    changed: true,
+    content: nextContent,
+    remainingItems,
+    removedItems,
+  };
 }

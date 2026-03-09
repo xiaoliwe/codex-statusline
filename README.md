@@ -18,6 +18,8 @@ codex-statusline install
 ```
 
 Restart the client after install so it reloads config and renderer state.
+If an older build left invalid managed items behind, run `codex-statusline repair`.
+If you previously installed the old unscoped package, remove it first with `npm uninstall -g codex-statusline`.
 
 ## Update
 

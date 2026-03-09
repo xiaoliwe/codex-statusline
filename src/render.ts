@@ -285,7 +285,7 @@ async function fetchClaudeUsage(): Promise<JsonValue | null> {
         Accept: "application/json",
         Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
-        "User-Agent": "codex-statusline/0.1.0",
+        "User-Agent": "codex-statusline/0.1.1",
         "anthropic-beta": "oauth-2025-04-20",
       },
     });
