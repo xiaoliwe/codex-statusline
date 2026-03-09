@@ -24,18 +24,13 @@ type RenderState = {
   cwd: string;
   contextRemainingTokens: number;
   contextUsedPercent: number;
-  codexVersion?: string;
   extraUsage?: ExtraUsageBlock;
   fiveHour?: UsageBlock;
   gitBranch: string;
   gitDirty: boolean;
-  inputTokens: number;
   modelName: string;
-  modelWithReasoningLabel: string;
   projectRoot: string;
   reasoningEffort?: string;
-  sessionDuration?: string;
-  sessionId?: string;
   sevenDay?: UsageBlock;
   thinking: boolean;
   totalInputTokens: number;
@@ -43,15 +38,17 @@ type RenderState = {
 };
 
 const colors = {
-  blue: "\u001b[38;2;0;153;255m",
-  cyan: "\u001b[38;2;86;182;194m",
+  aqua: "\u001b[38;2;104;214;255m",
+  blue: "\u001b[38;2;24;154;255m",
   dim: "\u001b[2m",
-  green: "\u001b[38;2;0;175;80m",
-  magenta: "\u001b[38;2;180;140;255m",
+  gray: "\u001b[38;2;132;137;168m",
+  green: "\u001b[38;2;18;214;111m",
+  mint: "\u001b[38;2;130;224;170m",
+  magenta: "\u001b[38;2;176;148;255m",
   orange: "\u001b[38;2;255;176;85m",
   red: "\u001b[38;2;255;85;85m",
   reset: "\u001b[0m",
-  white: "\u001b[38;2;220;220;220m",
+  white: "\u001b[38;2;236;239;244m",
   yellow: "\u001b[38;2;230;200;0m",
 };
 
@@ -104,13 +101,6 @@ function colorForPercent(percent: number): string {
     return colors.orange;
   }
   return colors.green;
-}
-
-function buildBar(percent: number, width: number): string {
-  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
-  const filled = Math.floor((clamped * width) / 100);
-  const empty = Math.max(0, width - filled);
-  return `${colorForPercent(clamped)}${"●".repeat(filled)}${colors.dim}${"○".repeat(empty)}${colors.reset}`;
 }
 
 function asRecord(value: unknown): JsonValue {
@@ -191,6 +181,10 @@ function formatSessionDuration(value: string | undefined): string | undefined {
     return `${Math.floor(elapsedSeconds / 60)}m`;
   }
   return `${elapsedSeconds}s`;
+}
+
+function compactModelName(value: string): string {
+  return value.replace(/^Claude\s+/i, "").trim() || value;
 }
 
 function resolveGitState(cwd: string): { branch: string; dirty: boolean } {
@@ -336,42 +330,17 @@ async function normalizeState(payload: JsonValue): Promise<RenderState> {
     contextRemainingTokens: Math.max(0, contextWindowSize - usedTokens),
     contextUsedPercent: contextWindowSize > 0 ? Math.floor((usedTokens * 100) / contextWindowSize) : 0,
     contextWindowSize,
-    codexVersion:
-      asString(asRecord(payload.codex).version) ||
-      asString(payload.codex_version) ||
-      asString(payload.codexVersion) ||
-      undefined,
     cwd,
     extraUsage: normalizeExtraUsage(asRecord(fetchedUsage.extra_usage)),
     fiveHour: normalizeUsageBlock(asRecord(fetchedUsage.five_hour)),
     gitBranch: git.branch,
     gitDirty: git.dirty,
-    inputTokens,
-    modelName:
+    modelName: compactModelName(
       asString(model.display_name) ||
-      asString(model.name) ||
-      asString(payload.model_name) ||
-      "Claude",
-    modelWithReasoningLabel:
-      (
-        asString(model.display_name) ||
         asString(model.name) ||
         asString(payload.model_name) ||
-        "Claude"
-      ) +
-      (
-        asString(asRecord(payload.reasoning).effort) ||
-        asString(settings.reasoningEffort) ||
-        asString(model.reasoning_effort) ||
-        asString(model.reasoningEffort)
-          ? ` / ${
-              asString(asRecord(payload.reasoning).effort) ||
-              asString(settings.reasoningEffort) ||
-              asString(model.reasoning_effort) ||
-              asString(model.reasoningEffort)
-            }`
-          : ""
-      ),
+        "Claude",
+    ),
     projectRoot: path.basename(cwd),
     reasoningEffort:
       asString(asRecord(payload.reasoning).effort) ||
@@ -379,8 +348,6 @@ async function normalizeState(payload: JsonValue): Promise<RenderState> {
       asString(model.reasoning_effort) ||
       asString(model.reasoningEffort) ||
       undefined,
-    sessionDuration: formatSessionDuration(asString(session.start_time)),
-    sessionId: asString(session.id) || undefined,
     sevenDay: normalizeUsageBlock(asRecord(fetchedUsage.seven_day)),
     thinking:
       asBoolean(payload.thinking) ||
@@ -392,7 +359,7 @@ async function normalizeState(payload: JsonValue): Promise<RenderState> {
 }
 
 function formatGitBranch(state: RenderState): string {
-  return state.gitBranch ? `${state.gitBranch}${state.gitDirty ? "*" : ""}` : "detached";
+  return state.gitBranch ? `${state.gitBranch}${state.gitDirty ? "*" : ""}` : "";
 }
 
 function normalizeUsageBlock(block: JsonValue): UsageBlock | undefined {
@@ -435,128 +402,69 @@ function readThinkingFlag(): boolean {
 }
 
 function buildPrimaryLine(state: RenderState): string {
-  const branch = state.gitBranch
-    ? ` ${colors.green}(${state.gitBranch}${state.gitDirty ? `${colors.red}*${colors.green}` : ""})${colors.reset}`
-    : "";
-
+  const branch = formatGitBranch(state);
+  const project = branch
+    ? `${colors.aqua}${state.projectRoot}${colors.reset} ${colors.mint}(${branch})${colors.reset}`
+    : `${colors.aqua}${state.projectRoot}${colors.reset}`;
   const parts = [
     `${colors.blue}${state.modelName}${colors.reset}`,
     `✍️ ${colorForPercent(state.contextUsedPercent)}${state.contextUsedPercent}%${colors.reset}`,
-    `${colors.cyan}${state.projectRoot}${colors.reset}${branch}`,
-  ];
-
-  if (state.sessionDuration) {
-    parts.push(`${colors.dim}⏱ ${colors.reset}${colors.white}${state.sessionDuration}${colors.reset}`);
-  }
-
-  parts.push(
+    project,
     state.thinking
       ? `${colors.magenta}◐ thinking${colors.reset}`
-      : `${colors.dim}◑ thinking${colors.reset}`,
-  );
+      : `${colors.gray}◑ thinking${colors.reset}`,
+  ];
 
   return parts.join(separator);
 }
 
-function buildNativeMirrorLines(state: RenderState): string[] {
+function buildMetricLine(state: RenderState): string {
   return [
-    [
-      `${colors.white}model-name${colors.reset} ${colors.cyan}${state.modelName}${colors.reset}`,
-      `${colors.white}model-with-reasoning${colors.reset} ${colors.cyan}${state.modelWithReasoningLabel}${colors.reset}`,
-      `${colors.white}reasoning${colors.reset} ${colors.cyan}${state.reasoningEffort ?? "off"}${colors.reset}`,
-      `${colors.white}session-id${colors.reset} ${colors.cyan}${state.sessionId ?? "n/a"}${colors.reset}`,
-      `${colors.white}codex-version${colors.reset} ${colors.cyan}${state.codexVersion ?? "n/a"}${colors.reset}`,
-    ].join(separator),
-    [
-      `${colors.white}context-used${colors.reset} ${colors.cyan}${formatMetricTokens(state.usedTokens)}${colors.reset}`,
-      `${colors.white}context-window-size${colors.reset} ${colors.cyan}${formatMetricTokens(state.contextWindowSize)}${colors.reset}`,
-      `${colors.white}context-remaining${colors.reset} ${colors.cyan}${formatMetricTokens(state.contextRemainingTokens)}${colors.reset}`,
-      `${colors.white}used-tokens${colors.reset} ${colors.cyan}${formatMetricTokens(state.usedTokens)}${colors.reset}`,
-      `${colors.white}total-input-tokens${colors.reset} ${colors.cyan}${formatMetricTokens(state.totalInputTokens)}${colors.reset}`,
-    ].join(separator),
-    [
-      `${colors.white}git-branch${colors.reset} ${colors.cyan}${formatGitBranch(state)}${colors.reset}`,
-      `${colors.white}project-root${colors.reset} ${colors.cyan}${state.projectRoot}${colors.reset}`,
-    ].join(separator),
-  ];
+    `${colors.white}used-tokens${colors.reset} ${colors.aqua}${formatMetricTokens(state.usedTokens)}${colors.reset}`,
+    `${colors.white}total-input-tokens${colors.reset} ${colors.aqua}${formatMetricTokens(state.totalInputTokens)}${colors.reset}`,
+    `${colors.white}context-remaining${colors.reset} ${colors.aqua}${formatMetricTokens(state.contextRemainingTokens)}${colors.reset}`,
+  ].join(separator);
 }
 
-function buildMetricsLines(state: RenderState): string[] {
-  const lines = [
-    [
-      `${colors.white}ctx${colors.reset} ${colors.cyan}${formatMetricTokens(state.usedTokens)}${colors.reset}${colors.dim}/${colors.reset}${colors.white}${formatMetricTokens(state.contextWindowSize)}${colors.reset}`,
-      `${colors.white}rem${colors.reset} ${colors.cyan}${formatMetricTokens(state.contextRemainingTokens)}${colors.reset}`,
-      `${colors.white}used${colors.reset} ${colors.cyan}${formatMetricTokens(state.usedTokens)}${colors.reset}`,
-      `${colors.white}input${colors.reset} ${colors.cyan}${formatMetricTokens(state.totalInputTokens)}${colors.reset}`,
-    ].join(separator),
-  ];
-
-  const secondaryParts = [];
-  secondaryParts.push(
-    `${colors.white}prompt${colors.reset} ${colors.cyan}${formatMetricTokens(state.inputTokens)}${colors.reset}`,
-  );
-  if (state.cacheCreationInputTokens > 0) {
-    secondaryParts.push(
-      `${colors.white}cache+${colors.reset} ${colors.cyan}${formatMetricTokens(state.cacheCreationInputTokens)}${colors.reset}`,
-    );
-  }
-  if (state.cacheReadInputTokens > 0) {
-    secondaryParts.push(
-      `${colors.white}cache↺${colors.reset} ${colors.cyan}${formatMetricTokens(state.cacheReadInputTokens)}${colors.reset}`,
-    );
-  }
-  if (state.sessionId) {
-    secondaryParts.push(`${colors.white}session${colors.reset} ${colors.cyan}${state.sessionId}${colors.reset}`);
-  }
-  if (state.reasoningEffort) {
-    secondaryParts.push(
-      `${colors.white}reasoning${colors.reset} ${colors.cyan}${state.reasoningEffort}${colors.reset}`,
-    );
-  }
-  if (state.codexVersion) {
-    secondaryParts.push(`${colors.white}codex${colors.reset} ${colors.cyan}${state.codexVersion}${colors.reset}`);
-  }
-
-  if (secondaryParts.length > 0) {
-    lines.push(secondaryParts.join(separator));
-  }
-
-  return lines;
-}
-
-function buildUsageLine(
-  label: string,
-  usage: UsageBlock | undefined,
-  resetStyle: "time" | "datetime" | "date" = "time",
-): string | null {
+function buildUsageFragment(label: string, usage: UsageBlock | undefined, resetStyle: "time" | "datetime"): string | null {
   if (!usage) {
     return null;
   }
 
   const percent = Math.round(usage.utilization ?? 0);
   const reset = formatResetTime(usage.resetsAt, resetStyle);
-  const resetFragment = reset
-    ? ` ${colors.dim}⟳${colors.reset} ${colors.white}${reset}${colors.reset}`
-    : "";
+  const percentText = `${colorForPercent(percent)}${percent}%${colors.reset}`;
 
-  return `${colors.white}${label}${colors.reset} ${buildBar(percent, 10)} ${colorForPercent(percent)}${String(percent).padStart(3, " ")}%${colors.reset}${resetFragment}`;
+  if (!reset) {
+    return `${colors.white}${label}${colors.reset} ${percentText}`;
+  }
+
+  return `${colors.white}${label}${colors.reset} ${percentText} ${colors.gray}⟳ ${reset}${colors.reset}`;
 }
 
-function buildExtraUsageLine(extraUsage: ExtraUsageBlock | undefined): string[] {
+function buildUsageLine(state: RenderState): string | null {
+  const parts = [
+    buildUsageFragment("five-hour-limit", state.fiveHour, "time"),
+    buildUsageFragment("weekly-limit", state.sevenDay, "datetime"),
+    buildExtraUsageFragment(state.extraUsage),
+  ].filter((value): value is string => Boolean(value));
+
+  if (parts.length === 0) {
+    return null;
+  }
+
+  return parts.join(separator);
+}
+
+function buildExtraUsageFragment(extraUsage: ExtraUsageBlock | undefined): string | null {
   if (!extraUsage?.isEnabled) {
-    return [];
+    return null;
   }
 
   const used = ((extraUsage.usedCredits ?? 0) / 100).toFixed(2);
   const limit = ((extraUsage.monthlyLimit ?? 0) / 100).toFixed(2);
-  const first = `${colors.white}extra${colors.reset}   ${buildBar(extraUsage.utilization ?? 0, 10)} ${colorForPercent(extraUsage.utilization ?? 0)}$${used}${colors.dim}/${colors.reset}${colors.white}$${limit}${colors.reset}`;
-  const resetLabel =
-    formatResetTime(extraUsage.resetsAt, "date") ??
-    new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" })
-      .format(new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1))
-      .toLowerCase();
-
-  return [first, `${colors.dim}resets ${colors.reset}${colors.white}${resetLabel}${colors.reset}`];
+  const percent = Math.round(extraUsage.utilization ?? 0);
+  return `${colors.white}extra${colors.reset} ${colorForPercent(percent)}$${used}${colors.reset}${colors.gray}/${colors.reset}${colors.white}$${limit}${colors.reset}`;
 }
 
 export async function renderRichStatusline(input: string): Promise<string> {
@@ -566,21 +474,11 @@ export async function renderRichStatusline(input: string): Promise<string> {
 
   const payload = JSON.parse(input) as JsonValue;
   const state = await normalizeState(payload);
-  const lines = [
-    buildPrimaryLine(state),
-    ...buildNativeMirrorLines(state),
-    ...buildMetricsLines(state),
-  ];
+  const lines = [buildPrimaryLine(state), buildMetricLine(state)];
+  const usageLine = buildUsageLine(state);
 
-  const usageLines = [
-    buildUsageLine("five-hour-limit", state.fiveHour, "time"),
-    buildUsageLine("weekly-limit   ", state.sevenDay, "datetime"),
-    ...buildExtraUsageLine(state.extraUsage),
-  ].filter((line): line is string => Boolean(line));
-
-  if (usageLines.length > 0) {
-    lines.push("");
-    lines.push(...usageLines);
+  if (usageLine) {
+    lines.push(usageLine);
   }
 
   return lines.join("\n");

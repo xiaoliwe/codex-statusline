@@ -6,28 +6,25 @@ test("renderRichStatusline renders primary and usage sections from sample payloa
   process.env.CODEX_STATUSLINE_SKIP_CLAUDE_USAGE = "1";
 
   const output = await renderRichStatusline(samplePayload());
+  const [primary, metrics, usage] = output.split("\n");
 
-  assert.match(output, /Claude Opus 4\.1/);
-  assert.match(output, /model-name/);
-  assert.match(output, /model-with-reasoning/);
-  assert.match(output, /context-window-size/);
-  assert.match(output, /context-remaining/);
-  assert.match(output, /used-tokens/);
-  assert.match(output, /total-input-tokens/);
-  assert.match(output, /git-branch/);
-  assert.match(output, /project-root/);
-  assert.match(output, /session-id/);
-  assert.match(output, /codex-version/);
-  assert.match(output, /ctx/);
-  assert.match(output, /input/);
-  assert.match(output, /prompt/);
-  assert.match(output, /session/);
-  assert.match(output, /codex/);
-  assert.match(output, /reasoning/);
-  assert.match(output, /five-hour-limit/);
-  assert.match(output, /weekly-limit/);
-  assert.match(output, /extra/);
-  assert.match(output, /thinking/);
+  assert.match(primary, /Opus 4\.1/);
+  assert.match(primary, /codex-statusline/);
+  assert.match(primary, /thinking/);
+  assert.match(metrics, /used-tokens/);
+  assert.match(metrics, /total-input-tokens/);
+  assert.match(metrics, /context-remaining/);
+  assert.match(usage, /five-hour-limit/);
+  assert.match(usage, /weekly-limit/);
+  assert.match(usage, /extra/);
+  assert.doesNotMatch(output, /model-name/);
+  assert.doesNotMatch(output, /model-with-reasoning/);
+  assert.doesNotMatch(output, /context-window-size/);
+  assert.doesNotMatch(output, /session-id/);
+  assert.doesNotMatch(output, /codex-version/);
+  assert.doesNotMatch(output, /prompt/);
+  assert.doesNotMatch(output, /cache\+/);
+  assert.doesNotMatch(output, /cache↺/);
 });
 
 test("renderRichStatusline falls back to Claude label when stdin is empty", async () => {
