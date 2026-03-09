@@ -1,0 +1,53 @@
+{
+  "name": "codex-statusline",
+  "version": "0.1.0",
+  "description": "Codex preset manager and Claude-style rich statusline renderer.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xiaoliwe/codex-statusline.git"
+  },
+  "homepage": "https://github.com/xiaoliwe/codex-statusline#readme",
+  "bugs": {
+    "url": "https://github.com/xiaoliwe/codex-statusline/issues"
+  },
+  "keywords": [
+    "codex",
+    "statusline",
+    "cli",
+    "terminal",
+    "claude"
+  ],
+  "bin": {
+    "codex-statusline": "bin/codex-statusline.js"
+  },
+  "exports": {
+    ".": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "clean": "rm -rf dist",
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc --noEmit -p tsconfig.json",
+    "prepare": "npm run build",
+    "prepack": "npm run clean && npm run build && npm run check",
+    "pack:dry-run": "npm pack --dry-run",
+    "test": "npm run build && node --test \"dist/test/*.test.js\"",
+    "dev": "tsx src/cli.ts"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "README.md",
+    "LICENSE",
+    "AGENTS.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "tsx": "^4.20.5",
+    "typescript": "^5.9.3"
+  }
+}
