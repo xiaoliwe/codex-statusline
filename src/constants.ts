@@ -18,6 +18,7 @@ export const SUPPORTED_STATUSLINE_ITEMS = [
 ] as const;
 
 export type StatusLineItem = (typeof SUPPORTED_STATUSLINE_ITEMS)[number];
+export const SUPPORTED_STATUSLINE_ITEM_SET = new Set<string>(SUPPORTED_STATUSLINE_ITEMS);
 
 export const MANAGED_COMMENT = "# codex-statusline managed";
 

@@ -1,10 +1,8 @@
-import { SUPPORTED_STATUSLINE_ITEMS } from "./constants.js";
+import { SUPPORTED_STATUSLINE_ITEMS, SUPPORTED_STATUSLINE_ITEM_SET } from "./constants.js";
 import type { StatusLinePreset } from "./presets.js";
 
-const SUPPORTED_SET = new Set(SUPPORTED_STATUSLINE_ITEMS);
-
 export function getUnsupportedItems(items: string[]): string[] {
-  return items.filter((item) => !SUPPORTED_SET.has(item as (typeof SUPPORTED_STATUSLINE_ITEMS)[number]));
+  return items.filter((item) => !SUPPORTED_STATUSLINE_ITEM_SET.has(item));
 }
 
 export function assertPresetCompatible(preset: StatusLinePreset): void {

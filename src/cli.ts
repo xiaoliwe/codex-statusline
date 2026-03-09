@@ -1,9 +1,17 @@
 import { execFileSync } from "node:child_process";
 import { clearState, ensureBackup, readState, removeBackup, restoreBackup, writeState } from "./backup.js";
 import { installClaudeBridge, uninstallClaudeBridge } from "./claude.js";
-import { assertPresetCompatible } from "./compat.js";
-import { resolveConfigPath } from "./constants.js";
-import { extractStatusLineItems, readConfig, removeManagedStatusLine, upsertStatusLine, writeConfig } from "./config.js";
+import { assertPresetCompatible, getUnsupportedItems } from "./compat.js";
+import { resolveConfigPath, SUPPORTED_STATUSLINE_ITEM_SET } from "./constants.js";
+import {
+  extractStatusLine,
+  extractStatusLineItems,
+  readConfig,
+  removeManagedStatusLine,
+  repairManagedStatusLine,
+  upsertStatusLine,
+  writeConfig,
+} from "./config.js";
 import { detectPreset, getPreset, PRESETS } from "./presets.js";
 import { renderRichStatuslineFromStdin, samplePayload } from "./render.js";
 
@@ -39,6 +47,7 @@ Usage:
   codex-statusline install
   codex-statusline install --preset complete
   codex-statusline current
+  codex-statusline repair
   codex-statusline uninstall
   codex-statusline presets
   codex-statusline render-rich < payload.json
@@ -77,7 +86,8 @@ function installCodexPreset(options: CommandOptions): void {
 
 function showCurrentConfig(options: CommandOptions): void {
   const current = readConfig(options.configPath);
-  const items = extractStatusLineItems(current);
+  const statusLine = extractStatusLine(current);
+  const items = statusLine?.items ?? null;
   const version = getCodexVersion();
 
   if (!items) {
@@ -92,13 +102,49 @@ function showCurrentConfig(options: CommandOptions): void {
   if (version) {
     console.log(`Codex version: ${version}`);
   }
+  console.log(`Managed: ${statusLine?.managed ? "yes" : "no"}`);
   console.log(`Preset: ${detectPreset(items)}`);
   console.log(`Items: ${items.join(", ")}`);
+
+  const unsupported = getUnsupportedItems(items);
+  if (unsupported.length > 0) {
+    console.log(`Unsupported items: ${unsupported.join(", ")}`);
+    if (statusLine?.managed) {
+      console.log("Run `codex-statusline repair` to remove stale managed items.");
+    }
+  }
 
   const state = readState();
   if (state) {
     console.log(`Backup: ${state.backupPath}`);
     console.log(`Installed at: ${state.installedAt}`);
+  }
+}
+
+function repairCodexConfig(options: CommandOptions): void {
+  const existing = readConfig(options.configPath);
+  const statusLine = extractStatusLine(existing);
+  if (!statusLine) {
+    console.log(`No [tui].status_line found in ${options.configPath}.`);
+    return;
+  }
+
+  if (!statusLine.managed) {
+    console.log(`Skipped ${options.configPath}: status_line is not managed by codex-statusline.`);
+    return;
+  }
+
+  const repaired = repairManagedStatusLine(existing, (item) => SUPPORTED_STATUSLINE_ITEM_SET.has(item));
+  if (!repaired.changed) {
+    console.log(`No stale managed items found in ${options.configPath}.`);
+    return;
+  }
+
+  writeConfig(repaired.content, options.configPath);
+  console.log(`Repaired ${options.configPath}.`);
+  console.log(`Removed: ${repaired.removedItems.join(", ")}`);
+  if (repaired.remainingItems.length > 0) {
+    console.log(`Remaining: ${repaired.remainingItems.join(", ")}`);
   }
 }
 
@@ -148,6 +194,9 @@ async function main(): Promise<void> {
       return;
     case "current":
       showCurrentConfig(options);
+      return;
+    case "repair":
+      repairCodexConfig(options);
       return;
     case "uninstall":
       uninstallCodexPreset(options);
