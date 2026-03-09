@@ -30,17 +30,16 @@
     "build": "tsc -p tsconfig.json",
     "check": "tsc --noEmit -p tsconfig.json",
     "prepare": "npm run build",
-    "prepack": "npm run clean && npm run build && npm run check",
+    "prepack": "npm run clean && npm run build && npm run check && rm -rf dist/test",
     "pack:dry-run": "npm pack --dry-run",
     "test": "npm run build && node --test \"dist/test/*.test.js\"",
     "dev": "tsx src/cli.ts"
   },
   "files": [
     "bin",
-    "dist",
+    "dist/src",
     "README.md",
-    "LICENSE",
-    "AGENTS.md"
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
