@@ -31,6 +31,8 @@ type RenderState = {
   gitDirty: boolean;
   inputTokens: number;
   modelName: string;
+  modelWithReasoningLabel: string;
+  projectRoot: string;
   reasoningEffort?: string;
   sessionDuration?: string;
   sessionId?: string;
@@ -350,6 +352,27 @@ async function normalizeState(payload: JsonValue): Promise<RenderState> {
       asString(model.name) ||
       asString(payload.model_name) ||
       "Claude",
+    modelWithReasoningLabel:
+      (
+        asString(model.display_name) ||
+        asString(model.name) ||
+        asString(payload.model_name) ||
+        "Claude"
+      ) +
+      (
+        asString(asRecord(payload.reasoning).effort) ||
+        asString(settings.reasoningEffort) ||
+        asString(model.reasoning_effort) ||
+        asString(model.reasoningEffort)
+          ? ` / ${
+              asString(asRecord(payload.reasoning).effort) ||
+              asString(settings.reasoningEffort) ||
+              asString(model.reasoning_effort) ||
+              asString(model.reasoningEffort)
+            }`
+          : ""
+      ),
+    projectRoot: path.basename(cwd),
     reasoningEffort:
       asString(asRecord(payload.reasoning).effort) ||
       asString(settings.reasoningEffort) ||
@@ -366,6 +389,10 @@ async function normalizeState(payload: JsonValue): Promise<RenderState> {
     totalInputTokens,
     usedTokens,
   };
+}
+
+function formatGitBranch(state: RenderState): string {
+  return state.gitBranch ? `${state.gitBranch}${state.gitDirty ? "*" : ""}` : "detached";
 }
 
 function normalizeUsageBlock(block: JsonValue): UsageBlock | undefined {
@@ -408,7 +435,6 @@ function readThinkingFlag(): boolean {
 }
 
 function buildPrimaryLine(state: RenderState): string {
-  const basename = path.basename(state.cwd);
   const branch = state.gitBranch
     ? ` ${colors.green}(${state.gitBranch}${state.gitDirty ? `${colors.red}*${colors.green}` : ""})${colors.reset}`
     : "";
@@ -416,7 +442,7 @@ function buildPrimaryLine(state: RenderState): string {
   const parts = [
     `${colors.blue}${state.modelName}${colors.reset}`,
     `✍️ ${colorForPercent(state.contextUsedPercent)}${state.contextUsedPercent}%${colors.reset}`,
-    `${colors.cyan}${basename}${colors.reset}${branch}`,
+    `${colors.cyan}${state.projectRoot}${colors.reset}${branch}`,
   ];
 
   if (state.sessionDuration) {
@@ -430,6 +456,29 @@ function buildPrimaryLine(state: RenderState): string {
   );
 
   return parts.join(separator);
+}
+
+function buildNativeMirrorLines(state: RenderState): string[] {
+  return [
+    [
+      `${colors.white}model-name${colors.reset} ${colors.cyan}${state.modelName}${colors.reset}`,
+      `${colors.white}model-with-reasoning${colors.reset} ${colors.cyan}${state.modelWithReasoningLabel}${colors.reset}`,
+      `${colors.white}reasoning${colors.reset} ${colors.cyan}${state.reasoningEffort ?? "off"}${colors.reset}`,
+      `${colors.white}session-id${colors.reset} ${colors.cyan}${state.sessionId ?? "n/a"}${colors.reset}`,
+      `${colors.white}codex-version${colors.reset} ${colors.cyan}${state.codexVersion ?? "n/a"}${colors.reset}`,
+    ].join(separator),
+    [
+      `${colors.white}context-used${colors.reset} ${colors.cyan}${formatMetricTokens(state.usedTokens)}${colors.reset}`,
+      `${colors.white}context-window-size${colors.reset} ${colors.cyan}${formatMetricTokens(state.contextWindowSize)}${colors.reset}`,
+      `${colors.white}context-remaining${colors.reset} ${colors.cyan}${formatMetricTokens(state.contextRemainingTokens)}${colors.reset}`,
+      `${colors.white}used-tokens${colors.reset} ${colors.cyan}${formatMetricTokens(state.usedTokens)}${colors.reset}`,
+      `${colors.white}total-input-tokens${colors.reset} ${colors.cyan}${formatMetricTokens(state.totalInputTokens)}${colors.reset}`,
+    ].join(separator),
+    [
+      `${colors.white}git-branch${colors.reset} ${colors.cyan}${formatGitBranch(state)}${colors.reset}`,
+      `${colors.white}project-root${colors.reset} ${colors.cyan}${state.projectRoot}${colors.reset}`,
+    ].join(separator),
+  ];
 }
 
 function buildMetricsLines(state: RenderState): string[] {
@@ -517,11 +566,15 @@ export async function renderRichStatusline(input: string): Promise<string> {
 
   const payload = JSON.parse(input) as JsonValue;
   const state = await normalizeState(payload);
-  const lines = [buildPrimaryLine(state), ...buildMetricsLines(state)];
+  const lines = [
+    buildPrimaryLine(state),
+    ...buildNativeMirrorLines(state),
+    ...buildMetricsLines(state),
+  ];
 
   const usageLines = [
-    buildUsageLine("current", state.fiveHour, "time"),
-    buildUsageLine("weekly ", state.sevenDay, "datetime"),
+    buildUsageLine("five-hour-limit", state.fiveHour, "time"),
+    buildUsageLine("weekly-limit   ", state.sevenDay, "datetime"),
     ...buildExtraUsageLine(state.extraUsage),
   ].filter((line): line is string => Boolean(line));
 
