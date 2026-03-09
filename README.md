@@ -8,13 +8,7 @@
 
 Manage Codex footer presets and install a Claude-style multi-line rich statusline.
 
-The CLI updates `~/.codex/config.toml`, installs a rich renderer into `~/.claude/statusline.sh`, and defaults to the full `complete` preset on install.
-
-## Features
-
-- Install a full native Codex footer preset with one command.
-- Render a multi-line rich statusline with model, context, token, git, session, and usage details.
-- Safely back up and restore managed `status_line` config changes.
+It updates `~/.codex/config.toml` and installs the rich renderer at `~/.claude/statusline.sh`.
 
 ## Installation
 
@@ -24,59 +18,66 @@ npm run build
 node bin/codex-statusline.js install
 ```
 
-For package usage after publish:
+After publish:
 
 ```bash
 npx codex-statusline install
 ```
 
-## Quick Start
+Restart the client after install so it reloads config and renderer state.
 
-Install the default setup:
+## Update
+
+```bash
+npm install
+npm run build
+node bin/codex-statusline.js install
+```
+
+This reapplies the latest native preset and refreshes the rich statusline script.
+
+If you only want to refresh the rich statusline bridge:
+
+```bash
+node bin/codex-statusline.js install-claude
+```
+
+If you are using the published package:
+
+```bash
+npx codex-statusline install
+```
+
+## Commands
+
+Install:
 
 ```bash
 codex-statusline install
 ```
 
-Check the active Codex footer config:
+Check current config:
 
 ```bash
 codex-statusline current
 ```
 
-Remove the managed footer and Claude bridge:
-
-```bash
-codex-statusline uninstall
-```
-
-Preview the rich renderer locally:
+Preview the rich renderer:
 
 ```bash
 codex-statusline sample | codex-statusline render-rich
 ```
 
-After install, fully restart the client that should display the statusline so it reloads config and renderer state.
-
-## Presets
-
-- `compact`: minimal footer for narrow terminals.
-- `balanced`: lighter signal density.
-- `dense`: wider native footer with more runtime detail.
-- `complete`: default install preset with the full native Codex item set.
-
-## Command Reference
+Refresh only the Claude bridge:
 
 ```bash
-codex-statusline install
-codex-statusline install --preset complete
-codex-statusline current
-codex-statusline presets
-codex-statusline render-rich
-codex-statusline sample
 codex-statusline install-claude
+```
+
+Remove managed changes:
+
+```bash
 codex-statusline uninstall
-codex-statusline uninstall-claude
 ```
 
 ## Development
