@@ -13,15 +13,8 @@ It updates `~/.codex/config.toml` and installs the rich renderer at `~/.claude/s
 ## Installation
 
 ```bash
-npm install
-npm run build
-node bin/codex-statusline.js install
-```
-
-After publish:
-
-```bash
-npx codex-statusline install
+npm install -g codex-statusline
+codex-statusline install
 ```
 
 Restart the client after install so it reloads config and renderer state.
@@ -29,75 +22,11 @@ Restart the client after install so it reloads config and renderer state.
 ## Update
 
 ```bash
-npm install
-npm run build
-node bin/codex-statusline.js install
+npm install -g codex-statusline@latest
+codex-statusline install
 ```
 
 This reapplies the latest native preset and refreshes the rich statusline script.
-
-If you only want to refresh the rich statusline bridge:
-
-```bash
-node bin/codex-statusline.js install-claude
-```
-
-If you are using the published package:
-
-```bash
-npx codex-statusline install
-```
-
-## Commands
-
-Install:
-
-```bash
-codex-statusline install
-```
-
-Check current config:
-
-```bash
-codex-statusline current
-```
-
-Preview the rich renderer:
-
-```bash
-codex-statusline sample | codex-statusline render-rich
-```
-
-Refresh only the Claude bridge:
-
-```bash
-codex-statusline install-claude
-```
-
-Remove managed changes:
-
-```bash
-codex-statusline uninstall
-```
-
-## Development
-
-```bash
-npm run check
-npm test
-npm run pack:dry-run
-```
-
-Use temporary paths when testing locally:
-
-```bash
-CODEX_STATUSLINE_HOME=/tmp/codex-statusline-state \
-CODEX_STATUSLINE_CONFIG_PATH=/tmp/config.toml \
-codex-statusline install
-
-CODEX_STATUSLINE_CLAUDE_HOME=/tmp/fake-claude \
-codex-statusline install-claude
-```
 
 ## License
 
