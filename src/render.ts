@@ -103,6 +103,10 @@ function colorForPercent(percent: number): string {
   return colors.green;
 }
 
+function clampPercent(percent: number): number {
+  return Math.max(0, Math.min(100, percent));
+}
+
 function asRecord(value: unknown): JsonValue {
   return value && typeof value === "object" ? (value as JsonValue) : {};
 }
@@ -426,6 +430,35 @@ function buildMetricLine(state: RenderState): string {
   ].join(separator);
 }
 
+function buildProgressBar(percent: number, width = 8): string {
+  const normalized = clampPercent(percent);
+  const filled = Math.round((normalized / 100) * width);
+  const empty = Math.max(0, width - filled);
+  return `${colorForPercent(normalized)}${"▰".repeat(filled)}${colors.gray}${"▱".repeat(empty)}${colors.reset}`;
+}
+
+function buildUsageMeter(
+  label: string,
+  percent: number,
+  detail: string | undefined,
+  reset: string | undefined,
+): string {
+  const normalized = Math.round(clampPercent(percent));
+  const bar = buildProgressBar(normalized);
+  const percentText = `${colorForPercent(normalized)}${normalized}%${colors.reset}`;
+  const parts = [`${colors.white}${label}${colors.reset}`, bar, percentText];
+
+  if (detail) {
+    parts.push(detail);
+  }
+
+  if (reset) {
+    parts.push(`${colors.gray}⟳ ${reset}${colors.reset}`);
+  }
+
+  return parts.join(" ");
+}
+
 function buildUsageFragment(label: string, usage: UsageBlock | undefined, resetStyle: "time" | "datetime"): string | null {
   if (!usage) {
     return null;
@@ -433,13 +466,7 @@ function buildUsageFragment(label: string, usage: UsageBlock | undefined, resetS
 
   const percent = Math.round(usage.utilization ?? 0);
   const reset = formatResetTime(usage.resetsAt, resetStyle);
-  const percentText = `${colorForPercent(percent)}${percent}%${colors.reset}`;
-
-  if (!reset) {
-    return `${colors.white}${label}${colors.reset} ${percentText}`;
-  }
-
-  return `${colors.white}${label}${colors.reset} ${percentText} ${colors.gray}⟳ ${reset}${colors.reset}`;
+  return buildUsageMeter(label, percent, undefined, reset);
 }
 
 function buildUsageLine(state: RenderState): string | null {
@@ -464,7 +491,8 @@ function buildExtraUsageFragment(extraUsage: ExtraUsageBlock | undefined): strin
   const used = ((extraUsage.usedCredits ?? 0) / 100).toFixed(2);
   const limit = ((extraUsage.monthlyLimit ?? 0) / 100).toFixed(2);
   const percent = Math.round(extraUsage.utilization ?? 0);
-  return `${colors.white}extra${colors.reset} ${colorForPercent(percent)}$${used}${colors.reset}${colors.gray}/${colors.reset}${colors.white}$${limit}${colors.reset}`;
+  const detail = `${colorForPercent(percent)}$${used}${colors.reset}${colors.gray}/${colors.reset}${colors.white}$${limit}${colors.reset}`;
+  return buildUsageMeter("extra", percent, detail, undefined);
 }
 
 export async function renderRichStatusline(input: string): Promise<string> {

@@ -15,7 +15,6 @@ export const SUPPORTED_STATUSLINE_ITEMS = [
   "total-input-tokens",
   "session-id",
   "codex-version",
-  "reasoning",
 ] as const;
 
 export type StatusLineItem = (typeof SUPPORTED_STATUSLINE_ITEMS)[number];

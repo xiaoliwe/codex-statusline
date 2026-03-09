@@ -17,6 +17,8 @@ test("renderRichStatusline renders primary and usage sections from sample payloa
   assert.match(usage, /five-hour-limit/);
   assert.match(usage, /weekly-limit/);
   assert.match(usage, /extra/);
+  assert.match(usage, /▰|▱/);
+  assert.match(usage, /\$/);
   assert.doesNotMatch(output, /model-name/);
   assert.doesNotMatch(output, /model-with-reasoning/);
   assert.doesNotMatch(output, /context-window-size/);
